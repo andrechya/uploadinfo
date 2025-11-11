@@ -269,13 +269,45 @@
       @media (max-width: 576px) {
         .card-custom .card-body,
         .card-custom .p-3 {
-          padding: 0.75rem !important;
+          padding: 0.75rem !important; /* Biarkan ini jika Anda mau 0.75rem */
         }
-
+      
+            .header-img {
+              border-radius: 1rem;
+              width: 100%;
+              height: auto;
+              display: block;
+      	  	padding: 0.5rem !important;
+            }
+      
+        /* MODIFIKASI UNTUK max-width: 576px */
+        .card-custom {
+          /* Menambahkan border-radius dan mengatur padding */
+          border-radius: 0.5rem !important; /* Contoh border-radius 0.5rem */
+          
+          /* PENTING: Menimpa padding yang ada di media query sebelumnya */
+          padding: 0.5rem !important; 
+         	margin-top: -15px !important;
+          margin-left: 0.5rem !important; /* Tambahkan margin jika perlu agar terlihat border-radiusnya */
+          margin-right: 0.5rem !important;
+          
+          /* Anda mungkin ingin membuang properti yang membuat card menjadi full screen */
+          min-height: auto !important; /* Tidak perlu full height di 576px */
+          box-shadow: 0 8px 20px rgba(2, 6, 23, 0.06) !important; /* Kembalikan shadow */
+          border: 1px solid #ced4da; /* Beri border agar terlihat jelas */
+        }
+        
+        /* Jika Anda ingin padding 0.5rem di dalam card body juga */
+        .card-custom .card-body,
+        .card-custom .p-3 {
+          padding: 0.5rem !important;
+        }
+        /* AKHIR MODIFIKASI */
+      
         h1.card-title {
           font-size: 1.25rem;
         }
-
+      
         body {
           padding: 10 !important;
           margin: 0 !important;
