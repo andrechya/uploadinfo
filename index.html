@@ -24,6 +24,25 @@
     />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
+
+		#page-loader {
+	        position: fixed; /* Memastikan loader tetap di tempat saat scrolling */
+	        top: 0;
+	        left: 0;
+	        width: 100%;
+	        height: 100%;
+	        background-color: #102c57; /* Warna latar belakang sama dengan body */
+	        z-index: 9999; /* Pastikan berada di atas semua elemen lain */
+	        transition: opacity 0.5s ease-out; /* Animasi fade-out */
+	        opacity: 1; /* Pastikan terlihat saat pertama kali dimuat */
+	    }
+	
+	    /* Kelas untuk menyembunyikan loader */
+	    .loader-hidden {
+	        opacity: 0 !important;
+	        visibility: hidden !important;
+	    }
+        
         body {
             background-color: #102c57;
             font-family: "Inter", sans-serif;
@@ -311,6 +330,27 @@
     </style>
 </head>
 <body>
+
+	<div id="page-loader" class="d-flex flex-column justify-content-center align-items-center">
+        <div class="spinner-border text-light" role="status" style="width: 3rem; height: 3rem; margin-bottom: 20px;">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        
+        <div id="loading-message" class="text-white mb-2" style="font-size: 0.9rem;">Checking cache...</div>
+        <div class="progress" style="width: 250px; height: 10px;">
+            <div 
+                id="loading-progress-bar"
+                class="progress-bar progress-bar-striped progress-bar-animated bg-light" 
+                role="progressbar" 
+                style="width: 10%" 
+                aria-valuenow="10" 
+                aria-valuemin="0" 
+                aria-valuemax="100"
+            ></div>
+        </div>
+        
+    </div>
+    
     <div class="container py-3">
         <img
             class="header-img mb-3"
@@ -449,98 +489,137 @@
         /**
          * Fungsi utama untuk inisialisasi, termasuk logika caching.
          */
-        async function init() {
-            // 1. Cek Data di Local Storage
-            const cachedData = localStorage.getItem(CACHE_KEY);
-            const lastFetch = localStorage.getItem(LAST_FETCH_TIME_KEY);
-            const currentTime = new Date().getTime();
-
-            let shouldFetch = true;
-
-            if (cachedData && lastFetch) {
-                const timeElapsed = currentTime - parseInt(lastFetch);
-
-                // Cek jika data belum kedaluwarsa
-                if (timeElapsed < CACHE_EXPIRY_MS) {
-                    try {
-                        const data = JSON.parse(cachedData);
-
-                        // Gunakan Data Cache
-                        EMP = data.empList || [];
-                        categories = data.categories || [];
-                        promotions = data.promotions || [];
-
-                        console.log("Data loaded from localStorage (cached).");
-                        shouldFetch = false; // Tidak perlu fetch ke server
-                    } catch (e) {
-                        console.error("Error parsing cached data:", e);
-                        // Lanjutkan untuk fetch jika data cache rusak
-                    }
-                } else {
-                    console.log("Cached data expired, fetching new data...");
-                    // Hapus data lama (opsional)
-                    localStorage.removeItem(CACHE_KEY);
-                    localStorage.removeItem(LAST_FETCH_TIME_KEY);
-                }
-            } else {
-                console.log("No cache found, fetching data...");
-            }
-
-            // 2. Fetch ke Server HANYA jika diperlukan
-            if (shouldFetch) {
-                try {
-                    // Get data from Google Apps Script
-                    const dataResponse = await fetch(GAS_WEB_APP_URL);
-                    if (!dataResponse.ok) {
-                        throw new Error(`HTTP error! status: ${dataResponse.status}`);
-                    }
-                    const data = await dataResponse.json();
-
-                    EMP = data.empList || [];
-                    categories = data.categories || [];
-                    promotions = data.promotions || [];
-
-                    // 3. Simpan Data Baru ke Local Storage
-                    if (EMP.length > 0) { // Pastikan data ada sebelum disimpan
-                        localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-                        localStorage.setItem(LAST_FETCH_TIME_KEY, currentTime.toString());
-                        console.log("Data successfully fetched and saved to localStorage.");
-                    }
-
-                } catch (error) {
-                    console.error("Error loading data:", error);
-                    Swal.fire({
-                        icon: "error",
-                        title: "Connection Error",
-                        text: "Cannot connect to server. Please check the GAS_WEB_APP_URL configuration.",
-                    });
-
-                    // Fallback data (pertahankan sebagai cadangan jika fetch gagal)
-                    EMP = [
-                        { name: "Test User 1", id: "SAL001" },
-                        { name: "Test User 2", id: "SAL002" },
-                    ];
-                    categories = ["Electronics", "Fashion", "Food"];
-                    promotions = ["Summer Sale", "Winter Promotion", "Clearance"];
-                }
-            }
-
-            // 4. Lanjutkan inisialisasi dengan data yang sudah didapatkan (dari cache atau fetch baru)
-            populateSelect("category", categories);
-            populateSelect("promotionTitle", promotions);
-            setupAutocomplete();
-
-            // Set dashboard URL
-            document.getElementById("openDashboard").href =
-                GAS_WEB_APP_URL + "?page=dashboard";
-
-            document
-                .getElementById("imageInput")
-                .addEventListener("change", handleImageSelect);
-            document
-                .getElementById("submissionForm")
-                .addEventListener("submit", onSubmitClick);
-        }
+		 
+		function updateLoader(message, progress) {
+		        const msgElement = document.getElementById('loading-message');
+		        const barElement = document.getElementById('loading-progress-bar');
+		        
+		        if (msgElement) msgElement.textContent = message;
+		        if (barElement) {
+		            barElement.style.width = progress + '%';
+		            barElement.setAttribute('aria-valuenow', progress);
+		        }
+		    }
+		
+		    /**
+		     * Menyembunyikan overlay loading setelah semua data siap.
+		     */
+		    function hideLoader() {
+		        const loader = document.getElementById('page-loader');
+		        if (loader) {
+		            // Animasi progress bar ke 100% sebelum fade out
+		            updateLoader("Done!", 100); 
+		            
+		            // Tambahkan kelas untuk fade-out dan menyembunyikan
+		            loader.classList.add('loader-hidden');
+		
+		            // Opsional: Hapus elemen dari DOM setelah animasi selesai (500ms)
+		            setTimeout(() => {
+		                loader.remove();
+		            }, 500); 
+		        }
+		    }
+    	async function init() {
+    	        // AWAL: Tampilkan progress saat mengecek cache
+    	        updateLoader("Checking cache...", 10); 
+    	        
+    	        const cachedData = localStorage.getItem(CACHE_KEY);
+    	        const lastFetch = localStorage.getItem(LAST_FETCH_TIME_KEY);
+    	        const currentTime = new Date().getTime();
+    	        
+    	        let shouldFetch = true;
+    	
+    	        if (cachedData && lastFetch) {
+    	            const timeElapsed = currentTime - parseInt(lastFetch);
+    	            
+    	            // Cek jika data belum kedaluwarsa
+    	            if (timeElapsed < CACHE_EXPIRY_MS) {
+    	                // ... (Logika Load dari Cache) ...
+    	                try {
+    	                    const data = JSON.parse(cachedData);
+    	                    EMP = data.empList || [];
+    	                    categories = data.categories || [];
+    	                    promotions = data.promotions || [];
+    	                    shouldFetch = false; 
+    	                    
+    	                    updateLoader("Cache loaded successfully.", 90); // Update status
+    	                } catch (e) {
+    	                    console.error("Error parsing cached data:", e);
+    	                }
+    	            } else {
+    	                updateLoader("Cache expired. Preparing to fetch new data...", 30); // Update status
+    	                // ... (Hapus cache lama) ...
+    	                localStorage.removeItem(CACHE_KEY);
+    	                localStorage.removeItem(LAST_FETCH_TIME_KEY);
+    	            }
+    	        } else {
+    	            updateLoader("No cache found. Starting data fetch...", 30); // Update status
+    	        }
+    	
+    	        // 2. Fetch ke Server HANYA jika diperlukan
+    	        if (shouldFetch) {
+    	            try {
+    	                // Update progress saat fetch dimulai
+    	                updateLoader("Fetching data from server...", 50); 
+    	                
+    	                // Get data from Google Apps Script
+    	                const dataResponse = await fetch(GAS_WEB_APP_URL);
+    	                if (!dataResponse.ok) {
+    	                    throw new Error(`HTTP error! status: ${dataResponse.status}`);
+    	                }
+    	                const data = await dataResponse.json();
+    	
+    	                EMP = data.empList || [];
+    	                categories = data.categories || [];
+    	                promotions = data.promotions || [];
+    	
+    	                // 3. Simpan Data Baru ke Local Storage
+    	                if (EMP.length > 0) { 
+    	                    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+    	                    localStorage.setItem(LAST_FETCH_TIME_KEY, currentTime.toString());
+    	                    updateLoader("Data received and saved.", 80); // Update status
+    	                }
+    	
+    	            } catch (error) {
+    	                // ... (Logika Error) ...
+    	                console.error("Error loading data:", error);
+    	                Swal.fire({
+    	                    icon: "error",
+    	                    title: "Connection Error",
+    	                    text: "Cannot connect to server...",
+    	                });
+    	
+    	                // Fallback data
+    	                EMP = [{ name: "Test User 1", id: "SAL001" }];
+    	                categories = ["Electronics"];
+    	                promotions = ["Sale"];
+    	                updateLoader("Using fallback data.", 80);
+    	            }
+    	        }
+    	        
+    	        // Update progress saat data diolah dan form diisi
+    	        updateLoader("Populating form...", 95); 
+    	
+    	        // 4. Lanjutkan inisialisasi dengan data yang sudah didapatkan
+    	        populateSelect("category", categories);
+    	        populateSelect("promotionTitle", promotions);
+    	        setupAutocomplete();
+    	
+    	        // Set dashboard URL
+    	        document.getElementById("openDashboard").href =
+    	            GAS_WEB_APP_URL + "?page=dashboard";
+    	
+    	        document
+    	            .getElementById("imageInput")
+    	            .addEventListener("change", handleImageSelect);
+    	        document
+    	            .getElementById("submissionForm")
+    	            .addEventListener("submit", onSubmitClick);
+    	            
+    	        // Panggil hideLoader setelah SEMUA inisialisasi selesai di init()
+    	        // Ini memastikan loader hilang setelah data siap, TERLEPAS dari event 'load' window
+    	        hideLoader(); 
+    	    }
 
         /**
          * Mengisi elemen <select> dengan array data.
