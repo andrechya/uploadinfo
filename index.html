@@ -24,25 +24,6 @@
     />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-
-		#page-loader {
-	        position: fixed; /* Memastikan loader tetap di tempat saat scrolling */
-	        top: 0;
-	        left: 0;
-	        width: 100%;
-	        height: 100%;
-	        background-color: #102c57; /* Warna latar belakang sama dengan body */
-	        z-index: 9999; /* Pastikan berada di atas semua elemen lain */
-	        transition: opacity 0.5s ease-out; /* Animasi fade-out */
-	        opacity: 1; /* Pastikan terlihat saat pertama kali dimuat */
-	    }
-	
-	    /* Kelas untuk menyembunyikan loader */
-	    .loader-hidden {
-	        opacity: 0 !important;
-	        visibility: hidden !important;
-	    }
-        
         body {
             background-color: #102c57;
             font-family: "Inter", sans-serif;
@@ -154,6 +135,7 @@
             z-index: 2;
         }
 
+        /* SweetAlert2 Styling */
         .swal2-popup {
             width: 350px !important;
             max-width: 90vw !important;
@@ -180,24 +162,11 @@
             margin: 0.15em auto 0.3em !important;
         }
 
-        .swal2-icon.swal2-successs {
-            font-size: 10px !important;
-        }
-
-        .swal2-icon .swal2-success-ring {
-            font-size: 10px !important;
-        }
-
-        .swal2-icon.swal2-error {
-            font-size: 10px !important;
-        }
-
-
         .swal2-actions {
             margin-top: 0.5em !important;
         }
 
-        /* SweetAlert2 customizations (dengan perbaikan rata tengah vertikal) */
+        /* SweetAlert2 button customization (rata tengah vertikal) */
         .swal2-confirm.swal2-styled {
             height: 1.5rem;
             display: flex !important;
@@ -214,35 +183,25 @@
             background-color: #102c57 !important;
         }
 
-        .swal2-cancel.swal2-styled {
-            background-color: #6c757d !important;
-            border: none !important;
-            color: white !important;
-            box-shadow: 0 2px 4px rgba(108, 117, 125, 0.3) !important;
-            transition: all 0.3s ease !important;
+        /* CSS untuk Loading Screen (Progress Bar) */
+        #page-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #102c57; 
+            z-index: 9999;
+            transition: opacity 0.5s ease-out;
+            opacity: 1;
         }
 
-        .swal2-cancel.swal2-styled:hover {
-            background-color: #5a6268 !important;
-            transform: translateY(-1px) !important;
-            box-shadow: 0 4px 8px rgba(108, 117, 125, 0.4) !important;
+        .loader-hidden {
+            opacity: 0 !important;
+            visibility: hidden !important;
         }
 
-        .swal2-deny.swal2-styled {
-            background-color: var(--danger-color, #f5222d) !important;
-            border: none !important;
-            color: white !important;
-            box-shadow: 0 2px 4px rgba(245, 34, 45, 0.3) !important;
-            transition: all 0.3s ease !important;
-        }
-
-        .swal2-deny.swal2-styled:hover {
-            background-color: #d81b29 !important;
-            transform: translateY(-1px) !important;
-            box-shadow: 0 4px 8px rgba(245, 34, 45, 0.4) !important;
-        }
-
-        /* Mobile-specific styles */
+        /* Mobile-specific styles (max-width: 768px) */
         @media (max-width: 768px) {
             .container {
                 max-width: 100% !important;
@@ -285,6 +244,7 @@
             }
         }
 
+        /* Mobile-specific styles (max-width: 576px) */
         @media (max-width: 576px) {
             .header-img {
                 border-radius: 1rem;
@@ -294,29 +254,21 @@
                 padding: 0.5rem !important;
             }
 
-            /* MODIFIKASI UNTUK max-width: 576px */
             .card-custom {
-                /* Menambahkan border-radius dan mengatur padding */
-                border-radius: 0.5rem !important; /* Contoh border-radius 0.5rem */
-
-                /* PENTING: Menimpa padding yang ada di media query sebelumnya */
+                border-radius: 0.5rem !important;
                 padding: 0.5rem !important;
                 margin-top: -15px !important;
-                margin-left: 0.5rem !important; /* Tambahkan margin agar terlihat border-radiusnya */
+                margin-left: 0.5rem !important;
                 margin-right: 0.5rem !important;
-
-                /* Mengembalikan agar tidak full screen dan menambahkan shadow */
                 min-height: auto !important;
                 box-shadow: 0 8px 20px rgba(2, 6, 23, 0.06) !important;
                 border: 1px solid #ced4da;
             }
 
-            /* Jika Anda ingin padding 0.5rem di dalam card body juga */
             .card-custom .card-body,
             .card-custom .p-3 {
                 padding: 0.5rem !important;
             }
-            /* AKHIR MODIFIKASI */
 
             h1.card-title {
                 font-size: 1.25rem;
@@ -330,13 +282,15 @@
     </style>
 </head>
 <body>
-
-	<div id="page-loader" class="d-flex flex-column justify-content-center align-items-center">
+    <div id="page-loader" class="d-flex flex-column justify-content-center align-items-center">
         <div class="spinner-border text-light" role="status" style="width: 3rem; height: 3rem; margin-bottom: 20px;">
             <span class="visually-hidden">Loading...</span>
         </div>
         
         <div id="loading-message" class="text-white mb-2" style="font-size: 0.9rem;">Checking cache...</div>
+        
+        <div id="loading-percentage" class="text-white mb-1" style="font-size: 0.8rem; font-weight: bold;">10%</div>
+        
         <div class="progress" style="width: 250px; height: 10px;">
             <div 
                 id="loading-progress-bar"
@@ -350,7 +304,6 @@
         </div>
         
     </div>
-    
     <div class="container py-3">
         <img
             class="header-img mb-3"
@@ -487,139 +440,151 @@
         let selectedImageData = "";
 
         /**
+         * Fungsi untuk memperbarui tampilan loader (pesan, progress bar, dan persentase).
+         */
+        function updateLoader(message, progress) {
+            const msgElement = document.getElementById('loading-message');
+            const barElement = document.getElementById('loading-progress-bar');
+            const percentElement = document.getElementById('loading-percentage'); 
+            
+            if (msgElement) msgElement.textContent = message;
+            if (barElement) {
+                barElement.style.width = progress + '%';
+                barElement.setAttribute('aria-valuenow', progress);
+            }
+            
+            // Perbarui teks persentase
+            if (percentElement) {
+                percentElement.textContent = progress + '%';
+            }
+        }
+
+        /**
+         * Menyembunyikan overlay loading setelah semua data siap.
+         */
+        function hideLoader() {
+            const loader = document.getElementById('page-loader');
+            if (loader) {
+                // Animasi progress bar ke 100% sebelum fade out
+                updateLoader("Done!", 100); 
+                
+                // Tambahkan kelas untuk fade-out dan menyembunyikan
+                loader.classList.add('loader-hidden');
+
+                // Opsional: Hapus elemen dari DOM setelah animasi selesai (500ms)
+                setTimeout(() => {
+                    loader.remove();
+                }, 500); 
+            }
+        }
+
+        /**
          * Fungsi utama untuk inisialisasi, termasuk logika caching.
          */
-		 
-		function updateLoader(message, progress) {
-		        const msgElement = document.getElementById('loading-message');
-		        const barElement = document.getElementById('loading-progress-bar');
-		        
-		        if (msgElement) msgElement.textContent = message;
-		        if (barElement) {
-		            barElement.style.width = progress + '%';
-		            barElement.setAttribute('aria-valuenow', progress);
-		        }
-		    }
-		
-		    /**
-		     * Menyembunyikan overlay loading setelah semua data siap.
-		     */
-		    function hideLoader() {
-		        const loader = document.getElementById('page-loader');
-		        if (loader) {
-		            // Animasi progress bar ke 100% sebelum fade out
-		            updateLoader("Done!", 100); 
-		            
-		            // Tambahkan kelas untuk fade-out dan menyembunyikan
-		            loader.classList.add('loader-hidden');
-		
-		            // Opsional: Hapus elemen dari DOM setelah animasi selesai (500ms)
-		            setTimeout(() => {
-		                loader.remove();
-		            }, 500); 
-		        }
-		    }
-    	async function init() {
-    	        // AWAL: Tampilkan progress saat mengecek cache
-    	        updateLoader("Checking cache...", 10); 
-    	        
-    	        const cachedData = localStorage.getItem(CACHE_KEY);
-    	        const lastFetch = localStorage.getItem(LAST_FETCH_TIME_KEY);
-    	        const currentTime = new Date().getTime();
-    	        
-    	        let shouldFetch = true;
-    	
-    	        if (cachedData && lastFetch) {
-    	            const timeElapsed = currentTime - parseInt(lastFetch);
-    	            
-    	            // Cek jika data belum kedaluwarsa
-    	            if (timeElapsed < CACHE_EXPIRY_MS) {
-    	                // ... (Logika Load dari Cache) ...
-    	                try {
-    	                    const data = JSON.parse(cachedData);
-    	                    EMP = data.empList || [];
-    	                    categories = data.categories || [];
-    	                    promotions = data.promotions || [];
-    	                    shouldFetch = false; 
-    	                    
-    	                    updateLoader("Cache loaded successfully.", 90); // Update status
-    	                } catch (e) {
-    	                    console.error("Error parsing cached data:", e);
-    	                }
-    	            } else {
-    	                updateLoader("Cache expired. Preparing to fetch new data...", 30); // Update status
-    	                // ... (Hapus cache lama) ...
-    	                localStorage.removeItem(CACHE_KEY);
-    	                localStorage.removeItem(LAST_FETCH_TIME_KEY);
-    	            }
-    	        } else {
-    	            updateLoader("No cache found. Starting data fetch...", 30); // Update status
-    	        }
-    	
-    	        // 2. Fetch ke Server HANYA jika diperlukan
-    	        if (shouldFetch) {
-    	            try {
-    	                // Update progress saat fetch dimulai
-    	                updateLoader("Fetching data from server...", 50); 
-    	                
-    	                // Get data from Google Apps Script
-    	                const dataResponse = await fetch(GAS_WEB_APP_URL);
-    	                if (!dataResponse.ok) {
-    	                    throw new Error(`HTTP error! status: ${dataResponse.status}`);
-    	                }
-    	                const data = await dataResponse.json();
-    	
-    	                EMP = data.empList || [];
-    	                categories = data.categories || [];
-    	                promotions = data.promotions || [];
-    	
-    	                // 3. Simpan Data Baru ke Local Storage
-    	                if (EMP.length > 0) { 
-    	                    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-    	                    localStorage.setItem(LAST_FETCH_TIME_KEY, currentTime.toString());
-    	                    updateLoader("Data received and saved.", 80); // Update status
-    	                }
-    	
-    	            } catch (error) {
-    	                // ... (Logika Error) ...
-    	                console.error("Error loading data:", error);
-    	                Swal.fire({
-    	                    icon: "error",
-    	                    title: "Connection Error",
-    	                    text: "Cannot connect to server...",
-    	                });
-    	
-    	                // Fallback data
-    	                EMP = [{ name: "Test User 1", id: "SAL001" }];
-    	                categories = ["Electronics"];
-    	                promotions = ["Sale"];
-    	                updateLoader("Using fallback data.", 80);
-    	            }
-    	        }
-    	        
-    	        // Update progress saat data diolah dan form diisi
-    	        updateLoader("Populating form...", 95); 
-    	
-    	        // 4. Lanjutkan inisialisasi dengan data yang sudah didapatkan
-    	        populateSelect("category", categories);
-    	        populateSelect("promotionTitle", promotions);
-    	        setupAutocomplete();
-    	
-    	        // Set dashboard URL
-    	        document.getElementById("openDashboard").href =
-    	            GAS_WEB_APP_URL + "?page=dashboard";
-    	
-    	        document
-    	            .getElementById("imageInput")
-    	            .addEventListener("change", handleImageSelect);
-    	        document
-    	            .getElementById("submissionForm")
-    	            .addEventListener("submit", onSubmitClick);
-    	            
-    	        // Panggil hideLoader setelah SEMUA inisialisasi selesai di init()
-    	        // Ini memastikan loader hilang setelah data siap, TERLEPAS dari event 'load' window
-    	        hideLoader(); 
-    	    }
+        async function init() {
+            // AWAL: Tampilkan progress saat mengecek cache
+            updateLoader("Checking cache...", 10); 
+            
+            // 1. Cek Data di Local Storage
+            const cachedData = localStorage.getItem(CACHE_KEY);
+            const lastFetch = localStorage.getItem(LAST_FETCH_TIME_KEY);
+            const currentTime = new Date().getTime();
+            
+            let shouldFetch = true;
+
+            if (cachedData && lastFetch) {
+                const timeElapsed = currentTime - parseInt(lastFetch);
+                
+                // Cek jika data belum kedaluwarsa
+                if (timeElapsed < CACHE_EXPIRY_MS) {
+                    try {
+                        const data = JSON.parse(cachedData);
+                        
+                        // Gunakan Data Cache
+                        EMP = data.empList || [];
+                        categories = data.categories || [];
+                        promotions = data.promotions || [];
+                        shouldFetch = false; 
+                        
+                        updateLoader("Cache loaded successfully.", 90); // Update status
+                    } catch (e) {
+                        console.error("Error parsing cached data:", e);
+                    }
+                } else {
+                    updateLoader("Cache expired. Preparing to fetch new data...", 30); // Update status
+                    // Hapus cache lama (opsional)
+                    localStorage.removeItem(CACHE_KEY);
+                    localStorage.removeItem(LAST_FETCH_TIME_KEY);
+                }
+            } else {
+                updateLoader("No cache found. Starting data fetch...", 30); // Update status
+            }
+
+            // 2. Fetch ke Server HANYA jika diperlukan
+            if (shouldFetch) {
+                try {
+                    // Update progress saat fetch dimulai
+                    updateLoader("Fetching data from server...", 50); 
+                    
+                    // Get data from Google Apps Script
+                    const dataResponse = await fetch(GAS_WEB_APP_URL);
+                    if (!dataResponse.ok) {
+                        throw new Error(`HTTP error! status: ${dataResponse.status}`);
+                    }
+                    const data = await dataResponse.json();
+
+                    EMP = data.empList || [];
+                    categories = data.categories || [];
+                    promotions = data.promotions || [];
+
+                    // 3. Simpan Data Baru ke Local Storage
+                    if (EMP.length > 0) { 
+                        localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+                        localStorage.setItem(LAST_FETCH_TIME_KEY, currentTime.toString());
+                        updateLoader("Data received and saved.", 80); // Update status
+                    }
+
+                } catch (error) {
+                    console.error("Error loading data:", error);
+                    Swal.fire({
+                        icon: "error",
+                        title: "Connection Error",
+                        text: "Cannot connect to server. Please check the GAS_WEB_APP_URL configuration.",
+                    });
+
+                    // Fallback data
+                    EMP = [
+                        { name: "Test User 1", id: "SAL001" },
+                        { name: "Test User 2", id: "SAL002" },
+                    ];
+                    categories = ["Electronics", "Fashion", "Food"];
+                    promotions = ["Summer Sale", "Winter Promotion", "Clearance"];
+                    updateLoader("Using fallback data.", 80);
+                }
+            }
+            
+            // Update progress saat data diolah dan form diisi
+            updateLoader("Populating form...", 95); 
+
+            // 4. Lanjutkan inisialisasi dengan data yang sudah didapatkan
+            populateSelect("category", categories);
+            populateSelect("promotionTitle", promotions);
+            setupAutocomplete();
+
+            // Set dashboard URL
+            document.getElementById("openDashboard").href =
+                GAS_WEB_APP_URL + "?page=dashboard";
+
+            document
+                .getElementById("imageInput")
+                .addEventListener("change", handleImageSelect);
+            document
+                .getElementById("submissionForm")
+                .addEventListener("submit", onSubmitClick);
+                
+            // Panggil hideLoader setelah SEMUA inisialisasi selesai di init()
+            hideLoader(); 
+        }
 
         /**
          * Mengisi elemen <select> dengan array data.
