@@ -450,20 +450,25 @@
         function renderUnregisteredModalContent(allUnregisteredData, promotionTitle) {
             unregisteredModalBody.innerHTML = "";
             
-            // ⭐️ LOGIKA FILTERING DITAMBAHKAN DI SINI
+            // ⭐️ LANGKAH 1: Buat objek baru untuk menampung data yang sudah difilter
             const filteredData = {};
             
+            // ⭐️ LANGKAH 2: Iterasi data mentah (allUnregisteredData)
             for (const category in allUnregisteredData) {
-                // Filter hanya item yang sesuai dengan promotionTitle yang aktif
-                const matchingSubmitters = allUnregisteredData[category].filter(s => 
-                    s.promotion === promotionTitle
-                );
-                
-                if (matchingSubmitters.length > 0) {
-                    filteredData[category] = matchingSubmitters;
+                if (allUnregisteredData.hasOwnProperty(category)) {
+                    // Filter hanya item yang sesuai dengan promotionTitle yang aktif
+                    const matchingSubmitters = allUnregisteredData[category].filter(s => 
+                        s.promotion === promotionTitle
+                    );
+                    
+                    if (matchingSubmitters.length > 0) {
+                        // Hanya masukkan kategori yang memiliki data yang cocok
+                        filteredData[category] = matchingSubmitters;
+                    }
                 }
             }
-
+        
+            // Gunakan data yang sudah difilter untuk rendering selanjutnya
             const categories = Object.keys(filteredData).sort();
             
             if (categories.length === 0) {
@@ -471,20 +476,22 @@
                     `<p class="text-success">Semua submitter terdaftar untuk promosi <strong>${promotionTitle}</strong>.</p>`;
                 return;
             }
-
+        
+            // ⭐️ LANGKAH 3: Iterasi menggunakan data yang sudah difilter (filteredData)
             categories.forEach((category) => {
-                const submitters = filteredData[category]; // Menggunakan data yang sudah difilter
-
+                // AMBIL DATA DARI filteredData, BUKAN allUnregisteredData!
+                const submitters = filteredData[category]; 
+        
                 const categoryHeader = document.createElement("h6");
                 categoryHeader.className = "mt-3 mb-2 text-primary";
                 categoryHeader.textContent =
                     category + ` (${submitters.length} submitters)`;
                 unregisteredModalBody.appendChild(categoryHeader);
-
+        
                 const listGroup = document.createElement("ul");
                 listGroup.className =
                     "list-group list-group-flush border rounded mb-4";
-
+        
                 submitters.forEach((s) => {
                     const listItem = document.createElement("li");
                     listItem.className =
@@ -749,5 +756,6 @@
     </script>
 </body>
 </html>
+
 
 
