@@ -335,365 +335,419 @@
       </div>
     </div>
 
+// ... (Kode HTML dan style di atas) ...
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-      // CONFIG: GANTI DENGAN URL GAS ANDA (SAMA DENGAN di index.html)
-      const GAS_WEB_APP_URL =
-        "https://script.google.com/macros/s/AKfycbw5bDAEdgHWMtJnlShqCh6YB19HFn9caHXlkG2FR5RjFWm4BYCABQPOSWyjKQHrWtqE/exec"; // GANTI INI DENGAN URL DEPLOYMENT ANDA
+        // CONFIG: GANTI DENGAN URL GAS ANDA (SAMA DENGAN di index.html)
+        const GAS_WEB_APP_URL =
+            "https://script.google.com/macros/s/AKfycbw5bDAEdgHWMtJnlShqCh6YB19HFn9caHXlkG2FR5RjFWm4BYCABQPOSWyjKQHrWtqE/exec"; // GANTI INI DENGAN URL DEPLOYMENT ANDA
 
-      let PROMOTIONS_LIST = [];
-      const refreshBtn = document.getElementById("refreshBtn");
-      const promoSelector = document.getElementById("promotionSelector");
-      const viewUnregisteredBtn = document.getElementById(
-        "viewUnregisteredBtn"
-      );
-      const unregisteredModalBody = document.getElementById(
-        "unregisteredModalBody"
-      );
-      const progressContent = document.getElementById("progressContent");
+        let PROMOTIONS_LIST = [];
+        const refreshBtn = document.getElementById("refreshBtn");
+        const promoSelector = document.getElementById("promotionSelector");
+        const viewUnregisteredBtn = document.getElementById(
+            "viewUnregisteredBtn"
+        );
+        const unregisteredModalBody = document.getElementById(
+            "unregisteredModalBody"
+        );
+        const progressContent = document.getElementById("progressContent");
 
-      let UNREGISTERED_DATA = null;
+        let UNREGISTERED_DATA = null;
+        // ⭐️ Variabel baru untuk menyimpan judul promosi yang sedang aktif/dipilih
+        let CURRENT_PROMOTION_TITLE = ""; 
 
-      // ----------------------------------------------------
-      // FUNGSI 1: Ambil Data Unregistered
-      // ----------------------------------------------------
+        // ----------------------------------------------------
+        // FUNGSI 1: Ambil Data Unregistered
+        // ----------------------------------------------------
+        // Catatan: Fungsi ini mengambil SEMUA data unregistered dari GAS. Filtering per promosi
+        // akan dilakukan di sisi klien (browser) di fungsi renderUnregisteredModalContent.
 
-      async function fetchUnregisteredData() {
-        viewUnregisteredBtn.disabled = true;
-        viewUnregisteredBtn.innerHTML =
-          '<span class="spinner-border spinner-border-sm"></span> Loading...';
+        async function fetchUnregisteredData() {
+            // Kita tidak perlu memanggil ini setiap kali render, cukup di awal.
+            // Biarkan tombol diatur di loadAndRender.
+            const url = `${GAS_WEB_APP_URL}?unregistered=true`;
 
-        const url = `${GAS_WEB_APP_URL}?unregistered=true`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok)
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
 
-        try {
-          const response = await fetch(url);
-          if (!response.ok)
-            throw new Error(`HTTP error! status: ${response.status}`);
-          const data = await response.json();
+                if (data.error) {
+                    throw new Error(
+                        `GAS Error: ${data.message || "Unknown server error."}`
+                    );
+                }
 
-          // ⭐️ PERBAIKAN 1: Cek apakah ada error dari sisi GAS
-          if (data.error) {
-            throw new Error(
-              `GAS Error: ${data.message || "Unknown server error."}`
-            );
-          }
+                if (
+                    !data.unregisteredData ||
+                    typeof data.unregisteredData !== "object"
+                ) {
+                    UNREGISTERED_DATA = {};
+                } else {
+                    UNREGISTERED_DATA = data.unregisteredData;
+                }
+                
+                // Setelah data UNREGISTERED_DATA terupdate, panggil fungsi untuk memperbarui tombol.
+                updateUnregisteredButtonState(CURRENT_PROMOTION_TITLE);
 
-          // ⭐️ PERBAIKAN 2: Pastikan data.unregisteredData ada dan merupakan objek
-          if (
-            !data.unregisteredData ||
-            typeof data.unregisteredData !== "object"
-          ) {
-            UNREGISTERED_DATA = {}; // Set ke objek kosong jika data tidak valid
-          } else {
-            UNREGISTERED_DATA = data.unregisteredData;
-          }
-
-          // Perhitungan sekarang aman karena UNREGISTERED_DATA pasti objek
-          const totalUnregistered =
-            Object.values(UNREGISTERED_DATA).flat().length;
-
-          // Aktifkan tombol
-          viewUnregisteredBtn.disabled = false;
-
-          // Tentukan warna dan teks berdasarkan jumlah data
-          let buttonClass = "btn-warning";
-          let buttonText = "View Unregistered";
-
-          if (totalUnregistered > 0) {
-            buttonClass = "btn-danger";
-            buttonText = `<i class="bi bi-eye"></i> View Unregistered (${totalUnregistered})`;
-          } else {
-            buttonClass = "btn-success";
-            buttonText = `<i class="bi bi-eye"></i> View Unregistered (0)`;
-          }
-
-          viewUnregisteredBtn.className = `btn btn-sm ${buttonClass}`;
-          viewUnregisteredBtn.innerHTML = buttonText;
-        } catch (error) {
-          // Penanganan error klien yang lebih eksplisit
-          viewUnregisteredBtn.disabled = true;
-          viewUnregisteredBtn.className = `btn btn-sm btn-secondary`;
-          viewUnregisteredBtn.innerHTML =
-            '<i class="bi bi-x-octagon"></i> Failed';
-          unregisteredModalBody.innerHTML = `<p class="text-danger">FATAL ERROR: ${error.message}</p>`;
-
-          // ⭐️ Saran: Cek Log Eksekusi di GAS untuk error server yang sebenarnya.
-        }
-      }
-
-      // ----------------------------------------------------
-      // FUNGSI 2: Render Modal Unregistered
-      // ----------------------------------------------------
-
-      function renderUnregisteredModalContent(data) {
-        unregisteredModalBody.innerHTML = "";
-
-        const categories = Object.keys(data).sort();
-        if (categories.length === 0) {
-          unregisteredModalBody.innerHTML =
-            '<p class="text-success">Semua submitter terdaftar di Sheet EMP.</p>';
-          return;
-        }
-
-        categories.forEach((category) => {
-          const submitters = data[category];
-
-          const categoryHeader = document.createElement("h6");
-          categoryHeader.className = "mt-3 mb-2 text-primary";
-          categoryHeader.textContent =
-            category + ` (${submitters.length} submitters)`;
-          unregisteredModalBody.appendChild(categoryHeader);
-
-          const listGroup = document.createElement("ul");
-          listGroup.className =
-            "list-group list-group-flush border rounded mb-4";
-
-          submitters.forEach((s) => {
-            const listItem = document.createElement("li");
-            listItem.className =
-              "list-group-item d-flex justify-content-between align-items-center";
-            listItem.innerHTML = `
-                <div>
-                    <strong>${s.name}</strong> 
-                    <div class="text-muted small">${s.id}</div>
-                </div>
-                <span class="badge bg-secondary rounded-pill">${s.promotion}</span>
-            `;
-            listGroup.appendChild(listItem);
-          });
-          unregisteredModalBody.appendChild(listGroup);
-        });
-      }
-
-      // ----------------------------------------------------
-      // FUNGSI 3: Ambil Data Promosi dan Dashboard (fetchData)
-      // ----------------------------------------------------
-
-      async function loadPromotionList() {
-        const url = `${GAS_WEB_APP_URL}?promotions=true`;
-
-        // ... (Logic fetch promotions tetap sama) ...
-        try {
-          const response = await fetch(url);
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          const data = await response.json();
-
-          if (data.error) {
-            throw new Error(data.message || "Error fetching promotion lists.");
-          }
-
-          PROMOTIONS_LIST = data.promotions || [];
-          populatePromotionSelect(PROMOTIONS_LIST, data.defaultPromotion);
-          return data.defaultPromotion;
-        } catch (error) {
-          console.error("Failed to load promotion list:", error);
-          alert("Failed to load promotion list: " + error.message);
-          promoSelector.innerHTML = '<option value="">Failed to Load</option>';
-          promoSelector.disabled = true;
-          return "";
-        }
-      }
-
-      function populatePromotionSelect(promos, defaultPromo) {
-        promoSelector.innerHTML = "";
-        if (promos.length === 0) {
-          promoSelector.innerHTML =
-            '<option value="">No Promotions Found</option>';
-          promoSelector.disabled = true;
-          return;
-        }
-        promos.forEach((v) => {
-          const opt = document.createElement("option");
-          opt.value = v;
-          opt.textContent = v;
-          if (v === defaultPromo) {
-            opt.selected = true;
-          }
-          promoSelector.appendChild(opt);
-        });
-        promoSelector.disabled = false;
-      }
-
-      async function fetchData(promotionTitle) {
-        if (!promotionTitle) {
-          return Promise.reject(new Error("Promotion Title is required."));
-        }
-
-        const url = `${GAS_WEB_APP_URL}?promotion=${encodeURIComponent(
-          promotionTitle
-        )}`;
-
-        // ... (Logic fetch data tetap sama) ...
-        try {
-          const response = await fetch(url);
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          const data = await response.json();
-
-          if (data.error) {
-            return Promise.reject(
-              new Error(data.message || "Error fetching dashboard data.")
-            );
-          }
-          return data;
-        } catch (error) {
-          return Promise.reject(
-            new Error("Data fetch failed: " + error.message)
-          );
-        }
-      }
-
-      // ----------------------------------------------------
-      // FUNGSI 4: Render Progress
-      // ----------------------------------------------------
-
-      function renderSummary(data) {
-        document.getElementById("totalEmployees").textContent =
-          data.totals.totalEmployees || 0;
-        document.getElementById("totalSubmitted").textContent =
-          data.totals.totalSubmitted || 0;
-        document.getElementById("totalPending").textContent =
-          data.totals.totalPending || 0;
-      }
-
-      function renderProgress(data) {
-        // Hapus konten lama di progressContent
-        progressContent.innerHTML = "";
-
-        if (!data.categories || data.categories.length === 0) {
-          progressContent.innerHTML = `<p class="text-muted">No categories or employees found for this promotion.</p>`;
-          return;
-        }
-
-        data.categories.forEach((cat) => {
-          const tot = data.totalsPerCategory[cat] || 0;
-          const sub = data.submittedPerCategory[cat] || 0;
-          const pendingList =
-            (data.pendingByCategory && data.pendingByCategory[cat]) || [];
-          const pct = tot === 0 ? 0 : Math.round((sub / tot) * 100);
-
-          const section = document.createElement("div");
-          section.className = "category-section";
-
-          // Tata letak bersebelahan untuk Category Title dan Progress Bar
-          section.innerHTML = `
-            <div class="row align-items-center">
-              <div class="col-sm-6 col-12">
-                <div class="category-title">${cat}</div>
-              </div>
-              <div class="col-sm-6 col-12">
-                <div class="progress-bar-custom">
-                  <div class="progress-fill" style="width:${pct}%"></div>
-                </div>
-                <div class="progress-label">${pct}% completed (${sub}/${tot})</div>
-              </div>
-            </div>
-            <div class="pending-list-container"></div>
-          `;
-
-          const pendingContainer = section.querySelector(
-            ".pending-list-container"
-          );
-
-          if (pendingList.length > 0) {
-            pendingList.forEach((p) => {
-              const item = document.createElement("div");
-              item.className = "pending-item";
-              item.innerHTML = `<div>${p.name}</div><div class="small text-muted">${p.id}</div>`;
-              pendingContainer.appendChild(item);
-            });
-          } else {
-            pendingContainer.innerHTML = `<div class="pending-empty">All employees in this category have submitted.</div>`;
-          }
-
-          progressContent.appendChild(section);
-        });
-      }
-
-      // ----------------------------------------------------
-      // FUNGSI 5: Load dan Render Utama
-      // ----------------------------------------------------
-
-      async function loadAndRender() {
-        const selectedPromo = promoSelector.value;
-        if (!selectedPromo) {
-          progressContent.innerHTML =
-            '<p class="text-muted">Please select a promotion title to view the progress.</p>';
-          renderSummary({
-            totals: { totalEmployees: 0, totalSubmitted: 0, totalPending: 0 },
-          });
-          return;
-        }
-
-        try {
-          refreshBtn.disabled = true;
-          refreshBtn.textContent = "Loading...";
-          fetchUnregisteredData();
-
-          // 1. Fetch data progress utama
-          const data = await fetchData(selectedPromo);
-
-          // 2. Fetch data unregistered (Perbarui data UNREGISTERED_DATA)
-          // Kita tidak perlu await di sini jika hanya ingin mengupdate tombol saja
-
-          // 3. Render hasil progress
-          renderSummary(data);
-          renderProgress(data);
-
-          refreshBtn.textContent = "Refresh";
-          refreshBtn.disabled = false;
-        } catch (err) {
-          refreshBtn.textContent = "Refresh";
-          refreshBtn.disabled = false;
-          alert("Failed to load dashboard: " + (err.message || String(err)));
-        }
-      }
-
-      // ----------------------------------------------------
-      // FUNGSI 6: Inisialisasi
-      // ----------------------------------------------------
-
-      async function initDashboard() {
-        try {
-          refreshBtn.disabled = true;
-          refreshBtn.textContent = "Loading...";
-
-          const defaultPromo = await loadPromotionList();
-
-          if (defaultPromo) {
-            await loadAndRender();
-          }
-
-          viewUnregisteredBtn.addEventListener("click", () => {
-            if (!UNREGISTERED_DATA) {
-              fetchUnregisteredData();
-            } else {
-              renderUnregisteredModalContent(UNREGISTERED_DATA);
+            } catch (error) {
+                console.error("Failed to fetch unregistered data:", error);
+                // Penanganan error klien yang lebih eksplisit
+                viewUnregisteredBtn.disabled = true;
+                viewUnregisteredBtn.className = `btn btn-sm btn-secondary`;
+                viewUnregisteredBtn.innerHTML =
+                    '<i class="bi bi-x-octagon"></i> Failed';
+                unregisteredModalBody.innerHTML = `<p class="text-danger">FATAL ERROR: ${error.message}</p>`;
             }
-          });
-
-          promoSelector.addEventListener("change", loadAndRender);
-          refreshBtn.addEventListener("click", loadAndRender);
-
-          setInterval(loadAndRender, 30000);
-        } catch (err) {
-          refreshBtn.textContent = "Error";
-          if (!PROMOTIONS_LIST || PROMOTIONS_LIST.length === 0) {
-            promoSelector.disabled = true;
-            refreshBtn.disabled = true;
-          } else {
-            refreshBtn.disabled = false;
-          }
         }
-      }
+        
+        // ⭐️ FUNGSI BARU: Update tampilan tombol berdasarkan filter yang aktif
+        function updateUnregisteredButtonState(promotionTitle) {
+            if (!UNREGISTERED_DATA) return;
 
-      document.addEventListener("DOMContentLoaded", initDashboard);
+            // 1. Filter UNREGISTERED_DATA berdasarkan promotionTitle yang aktif
+            const filteredData = {};
+            let totalFilteredUnregistered = 0;
+
+            for (const category in UNREGISTERED_DATA) {
+                // Filter hanya item yang sesuai dengan promotionTitle yang aktif
+                const matchingSubmitters = UNREGISTERED_DATA[category].filter(s => 
+                    s.promotion === promotionTitle
+                );
+                
+                if (matchingSubmitters.length > 0) {
+                    filteredData[category] = matchingSubmitters;
+                    totalFilteredUnregistered += matchingSubmitters.length;
+                }
+            }
+
+            // 2. Tentukan tampilan tombol
+            viewUnregisteredBtn.disabled = false;
+            let buttonClass = "btn-warning";
+            let buttonText = "View Unregistered";
+
+            if (totalFilteredUnregistered > 0) {
+                buttonClass = "btn-danger";
+                buttonText = `<i class="bi bi-eye"></i> View Unregistered (${totalFilteredUnregistered})`;
+            } else {
+                buttonClass = "btn-success";
+                buttonText = `<i class="bi bi-eye"></i> View Unregistered (0)`;
+            }
+
+            viewUnregisteredBtn.className = `btn btn-sm ${buttonClass}`;
+            viewUnregisteredBtn.innerHTML = buttonText;
+        }
+
+
+        // ----------------------------------------------------
+        // FUNGSI 2: Render Modal Unregistered (PERBAIKAN LOGIKA)
+        // ----------------------------------------------------
+
+        function renderUnregisteredModalContent(allUnregisteredData, promotionTitle) {
+            unregisteredModalBody.innerHTML = "";
+            
+            // ⭐️ LOGIKA FILTERING DITAMBAHKAN DI SINI
+            const filteredData = {};
+            
+            for (const category in allUnregisteredData) {
+                // Filter hanya item yang sesuai dengan promotionTitle yang aktif
+                const matchingSubmitters = allUnregisteredData[category].filter(s => 
+                    s.promotion === promotionTitle
+                );
+                
+                if (matchingSubmitters.length > 0) {
+                    filteredData[category] = matchingSubmitters;
+                }
+            }
+
+            const categories = Object.keys(filteredData).sort();
+            
+            if (categories.length === 0) {
+                unregisteredModalBody.innerHTML =
+                    `<p class="text-success">Semua submitter terdaftar untuk promosi <strong>${promotionTitle}</strong>.</p>`;
+                return;
+            }
+
+            categories.forEach((category) => {
+                const submitters = filteredData[category]; // Menggunakan data yang sudah difilter
+
+                const categoryHeader = document.createElement("h6");
+                categoryHeader.className = "mt-3 mb-2 text-primary";
+                categoryHeader.textContent =
+                    category + ` (${submitters.length} submitters)`;
+                unregisteredModalBody.appendChild(categoryHeader);
+
+                const listGroup = document.createElement("ul");
+                listGroup.className =
+                    "list-group list-group-flush border rounded mb-4";
+
+                submitters.forEach((s) => {
+                    const listItem = document.createElement("li");
+                    listItem.className =
+                        "list-group-item d-flex justify-content-between align-items-center";
+                    listItem.innerHTML = `
+                        <div>
+                            <strong>${s.name}</strong> 
+                            <div class="text-muted small">${s.id}</div>
+                        </div>
+                        <span class="badge bg-secondary rounded-pill">${s.promotion}</span>
+                    `;
+                    listGroup.appendChild(listItem);
+                });
+                unregisteredModalBody.appendChild(listGroup);
+            });
+        }
+        
+        // ... (Fungsi 3: loadPromotionList, populatePromotionSelect, dan fetchData tetap sama) ...
+        
+        // ----------------------------------------------------
+        // FUNGSI 4: Render Progress
+        // ----------------------------------------------------
+
+        function renderSummary(data) {
+            document.getElementById("totalEmployees").textContent =
+                data.totals.totalEmployees || 0;
+            document.getElementById("totalSubmitted").textContent =
+                data.totals.totalSubmitted || 0;
+            document.getElementById("totalPending").textContent =
+                data.totals.totalPending || 0;
+        }
+
+        function renderProgress(data) {
+            // Hapus konten lama di progressContent
+            progressContent.innerHTML = "";
+
+            if (!data.categories || data.categories.length === 0) {
+                progressContent.innerHTML = `<p class="text-muted">No categories or employees found for this promotion.</p>`;
+                return;
+            }
+
+            data.categories.forEach((cat) => {
+                const tot = data.totalsPerCategory[cat] || 0;
+                const sub = data.submittedPerCategory[cat] || 0;
+                const pendingList =
+                    (data.pendingByCategory && data.pendingByCategory[cat]) || [];
+                const pct = tot === 0 ? 0 : Math.round((sub / tot) * 100);
+
+                const section = document.createElement("div");
+                section.className = "category-section";
+
+                // Tata letak bersebelahan untuk Category Title dan Progress Bar
+                section.innerHTML = `
+                    <div class="row align-items-center">
+                        <div class="col-sm-6 col-12">
+                            <div class="category-title">${cat}</div>
+                        </div>
+                        <div class="col-sm-6 col-12">
+                            <div class="progress-bar-custom">
+                                <div class="progress-fill" style="width:${pct}%"></div>
+                            </div>
+                            <div class="progress-label">${pct}% completed (${sub}/${tot})</div>
+                        </div>
+                    </div>
+                    <div class="pending-list-container"></div>
+                `;
+
+                const pendingContainer = section.querySelector(
+                    ".pending-list-container"
+                );
+
+                if (pendingList.length > 0) {
+                    pendingList.forEach((p) => {
+                        const item = document.createElement("div");
+                        item.className = "pending-item";
+                        item.innerHTML = `<div>${p.name}</div><div class="small text-muted">${p.id}</div>`;
+                        pendingContainer.appendChild(item);
+                    });
+                } else {
+                    pendingContainer.innerHTML = `<div class="pending-empty">All employees in this category have submitted.</div>`;
+                }
+
+                progressContent.appendChild(section);
+            });
+        }
+
+        // ----------------------------------------------------
+        // FUNGSI 5: Load dan Render Utama (PERBAIKAN LOGIKA)
+        // ----------------------------------------------------
+
+        async function loadAndRender() {
+            const selectedPromo = promoSelector.value;
+            // ⭐️ Update variabel global CURRENT_PROMOTION_TITLE
+            CURRENT_PROMOTION_TITLE = selectedPromo;
+
+            if (!selectedPromo) {
+                progressContent.innerHTML =
+                    '<p class="text-muted">Please select a promotion title to view the progress.</p>';
+                renderSummary({
+                    totals: { totalEmployees: 0, totalSubmitted: 0, totalPending: 0 },
+                });
+                // Reset tampilan tombol unregistered jika tidak ada promosi yang dipilih
+                viewUnregisteredBtn.disabled = true;
+                viewUnregisteredBtn.className = `btn btn-sm btn-warning`;
+                viewUnregisteredBtn.innerHTML =
+                    '<i class="bi bi-eye"></i> View Unregistered';
+                return;
+            }
+
+            try {
+                refreshBtn.disabled = true;
+                refreshBtn.textContent = "Loading...";
+                
+                // 1. Fetch data progress utama (Ini akan meng-handle Summary dan Progress)
+                const data = await fetchData(selectedPromo);
+
+                // 2. Fetch data unregistered (asumsi ini dipanggil di init, jika tidak, panggil di sini)
+                // fetchUnregisteredData(); // Jika Anda ingin memastikan data UNREGISTERED_DATA terbaru
+
+                // 3. Render hasil progress
+                renderSummary(data);
+                renderProgress(data);
+                
+                // 4. Perbarui status tombol 'Unregistered' berdasarkan promosi yang aktif
+                updateUnregisteredButtonState(selectedPromo); 
+
+                refreshBtn.textContent = "Refresh";
+                refreshBtn.disabled = false;
+            } catch (err) {
+                refreshBtn.textContent = "Refresh";
+                refreshBtn.disabled = false;
+                alert("Failed to load dashboard: " + (err.message || String(err)));
+            }
+        }
+
+        // ----------------------------------------------------
+        // FUNGSI 6: Inisialisasi (PERBAIKAN LISTENER)
+        // ----------------------------------------------------
+
+        async function initDashboard() {
+            try {
+                refreshBtn.disabled = true;
+                refreshBtn.textContent = "Loading...";
+
+                const defaultPromo = await loadPromotionList();
+                
+                // ⭐️ Update CURRENT_PROMOTION_TITLE di awal inisialisasi
+                CURRENT_PROMOTION_TITLE = defaultPromo;
+
+                // ⭐️ Ambil data unregistered di awal (hanya sekali)
+                await fetchUnregisteredData(); 
+
+                if (defaultPromo) {
+                    await loadAndRender();
+                }
+
+                // ⭐️ PERBAIKI LISTENER UNREGISTERED BUTTON
+                viewUnregisteredBtn.addEventListener("click", () => {
+                    if (!UNREGISTERED_DATA) {
+                        alert("Unregistered data is still loading or failed to load.");
+                    } else {
+                        // Panggil render dengan data mentah dan promosi yang dipilih saat ini
+                        renderUnregisteredModalContent(UNREGISTERED_DATA, CURRENT_PROMOTION_TITLE);
+                    }
+                });
+
+                promoSelector.addEventListener("change", loadAndRender);
+                refreshBtn.addEventListener("click", loadAndRender);
+
+                setInterval(loadAndRender, 30000);
+            } catch (err) {
+                refreshBtn.textContent = "Error";
+                if (!PROMOTIONS_LIST || PROMOTIONS_LIST.length === 0) {
+                    promoSelector.disabled = true;
+                    refreshBtn.disabled = true;
+                } else {
+                    refreshBtn.disabled = false;
+                }
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", initDashboard);
+        
+        // ... (Sisa fungsi loadPromotionList, populatePromotionSelect, dan fetchData di luar skrip di atas harus disertakan di sini) ...
+        
+        // ... (Kode untuk loadPromotionList, populatePromotionSelect, dan fetchData yang tidak Anda ubah) ...
+
+        async function loadPromotionList() {
+            const url = `${GAS_WEB_APP_URL}?promotions=true`;
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.message || "Error fetching promotion lists.");
+                }
+
+                PROMOTIONS_LIST = data.promotions || [];
+                populatePromotionSelect(PROMOTIONS_LIST, data.defaultPromotion);
+                return data.defaultPromotion;
+            } catch (error) {
+                console.error("Failed to load promotion list:", error);
+                alert("Failed to load promotion list: " + error.message);
+                promoSelector.innerHTML = '<option value="">Failed to Load</option>';
+                promoSelector.disabled = true;
+                return "";
+            }
+        }
+
+        function populatePromotionSelect(promos, defaultPromo) {
+            promoSelector.innerHTML = "";
+            if (promos.length === 0) {
+                promoSelector.innerHTML =
+                    '<option value="">No Promotions Found</option>';
+                promoSelector.disabled = true;
+                return;
+            }
+            promos.forEach((v) => {
+                const opt = document.createElement("option");
+                opt.value = v;
+                opt.textContent = v;
+                if (v === defaultPromo) {
+                    opt.selected = true;
+                }
+                promoSelector.appendChild(opt);
+            });
+            promoSelector.disabled = false;
+        }
+
+        async function fetchData(promotionTitle) {
+            if (!promotionTitle) {
+                return Promise.reject(new Error("Promotion Title is required."));
+            }
+
+            const url = `${GAS_WEB_APP_URL}?promotion=${encodeURIComponent(
+                promotionTitle
+            )}`;
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+
+                if (data.error) {
+                    return Promise.reject(
+                        new Error(data.message || "Error fetching dashboard data.")
+                    );
+                }
+                return data;
+            } catch (error) {
+                return Promise.reject(
+                    new Error("Data fetch failed: " + error.message)
+                );
+            }
+        }
     </script>
-  </body>
+</body>
 </html>
 
 
