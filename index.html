@@ -820,13 +820,32 @@
        * @param {Object} obj - Objek data formulir.
        * @returns {string} Pesan error atau string kosong jika valid.
        */
+      /**
+       * Memvalidasi data formulir sebelum dikirim.
+       * @param {Object} obj - Objek data formulir.
+       * @returns {string} Pesan error atau string kosong jika valid.
+       */
       function validateForm(obj) {
-        if (!obj.salesName) return "Nama Sales wajib diisi.";
-        if (!obj.salperId) return "ID Salper wajib diisi (pilih dari saran).";
-        if (!obj.category) return "Kategori wajib dipilih.";
-        if (!obj.promotionTitle) return "Judul Promosi wajib dipilih.";
-        if (!obj.imageData) return "Bukti Screenshot wajib di upload.";
-        return "";
+          if (!obj.salesName) return "Nama Sales wajib diisi.";
+          
+          if (!obj.salperId) return "ID Salper wajib diisi (pilih dari saran atau input manual).";
+      
+          // --- LOGIC BARU UNTUK MENCEGAH INPUT HANYA '0' ---
+          // 1. Membersihkan string dari semua karakter non-alfanumerik/non-angka.
+          // Ini mengubah '0-', '-0-', '0' menjadi '0'.
+          const cleanedSalperId = obj.salperId.trim().replace(/[^a-zA-Z0-9]/g, ''); 
+      
+          // 2. Mencegah nilai yang tersisa hanya "0".
+          if (cleanedSalperId === "0") {
+              return "ID Salper tidak boleh diisi dengan angka 0 saja, termasuk kombinasi seperti '0-'. Silakan masukkan ID yang valid atau '-' jika tidak ada ID.";
+          }
+          // --------------------------------------------------
+      
+          if (!obj.category) return "Kategori wajib dipilih.";
+          if (!obj.promotionTitle) return "Judul Promosi wajib dipilih.";
+          if (!obj.imageData) return "Bukti Screenshot wajib di upload.";
+          
+          return "";
       }
 
       /**
@@ -953,3 +972,4 @@
     </script>
   </body>
 </html>
+
