@@ -631,13 +631,13 @@
         try {
           refreshBtn.disabled = true;
           refreshBtn.textContent = "Loading...";
+          fetchUnregisteredData();
 
           // 1. Fetch data progress utama
           const data = await fetchData(selectedPromo);
 
           // 2. Fetch data unregistered (Perbarui data UNREGISTERED_DATA)
           // Kita tidak perlu await di sini jika hanya ingin mengupdate tombol saja
-          fetchUnregisteredData();
 
           // 3. Render hasil progress
           renderSummary(data);
@@ -694,3 +694,4 @@
     </script>
   </body>
 </html>
+
